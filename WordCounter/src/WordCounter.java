@@ -1,0 +1,323 @@
+import java.util.Arrays;
+import java.util.Comparator;
+
+import components.map.Map;
+import components.map.Map1L;
+import components.set.Set;
+import components.set.Set1L;
+import components.simplereader.SimpleReader;
+import components.simplereader.SimpleReader1L;
+import components.simplewriter.SimpleWriter;
+import components.simplewriter.SimpleWriter1L;
+
+/**
+ * Inputs a text file and generates a table on an HTML file with how many times
+ * each word is used.
+ *
+ * @author Mazin Tagelsir
+ *
+ */
+public final class WordCounter {
+
+    /**
+     * Private constructor so this utility class cannot be instantiated.
+     */
+    private WordCounter() {
+    }
+
+    //---------------done
+    /**
+     * Returns the first "word" (maximal length string of characters not in
+     * {@code separators}) or "separator string" (maximal length string of
+     * characters in {@code separators}) in the given {@code text} starting at
+     * the given {@code position}.
+     *
+     * @param text
+     *            the {@code String} from which to get the word or separator
+     *            string
+     * @param position
+     *            the starting index
+     * @param set
+     *            the {@code Set} of separator characters
+     * @return the first word or separator string found in {@code text} starting
+     *         at index {@code position}
+     * @requires 0 <= position < |text|
+     * @ensures <pre>
+     * nextWordOrSeparator =
+     *   text[position, position + |nextWordOrSeparator|)  and
+     * if entries(text[position, position + 1)) intersection separators = {}
+     * then
+     *   entries(nextWordOrSeparator) intersection separators = {}  and
+     *   (position + |nextWordOrSeparator| = |text|  or
+     *    entries(text[position, position + |nextWordOrSeparator| + 1))
+     *      intersection separators /= {})
+     * else
+     *   entries(nextWordOrSeparator) is subset of separators  and
+     *   (position + |nextWordOrSeparator| = |text|  or
+     *    entries(text[position, position + |nextWordOrSeparator| + 1))
+     *      is not subset of separators)
+     * </pre>
+     */
+    public static String nextWordOrSeparator(String text, int position,
+            Set<Character> set) {
+        assert text != null : "Violation of: text is not null";
+        assert set != null : "Violation of: separators is not null";
+        assert 0 <= position : "Violation of: 0 <= position";
+        assert position < text.length() : "Violation of: position < |text|";
+
+        StringBuilder result = new StringBuilder();
+        boolean sep = true;
+
+        //gets the character at the position
+        char startChar = text.charAt(position);
+
+        //if set has char
+        if (set.contains(startChar)) {
+
+            //loop through string ------- if sep is true
+            for (int i = position; i < text.length() && sep; i++) {
+
+                //if set has same string
+                if (set.contains(text.charAt(i))) {
+                    char temp = text.charAt(i); //new char = string at position i
+                    result.append(temp); //add char to the return string
+                } else {
+                    sep = false;
+                }
+            }
+        } else {
+            sep = false;
+
+            for (int i = position; i < text.length() && !sep; i++) {
+
+                /*
+                 * if the set doesnt have the character then declare temp to
+                 * that character and add it to the final result. if not then
+                 * declare sep to true. Once this is all finished we change the
+                 * whole result to a string to return it.
+                 */
+                if (!set.contains(text.charAt(i))) {
+                    char temp = text.charAt(i);
+                    result.append(temp);
+                } else {
+                    sep = true;
+                }
+            }
+
+        }
+        return result.toString();
+    }
+
+    //---------------done
+    /**
+     * Generates the set of characters in the given {@code String} into the
+     * given {@code Set}.
+     *
+     * @param str
+     *            the given {@code String}
+     * @param set
+     *            the {@code Set} to be replaced
+     * @replaces charSet
+     * @ensures charSet = entries(str)
+     */
+    public static void generateElements(String str, Set<Character> set) {
+        assert str != null : "Violation of: str is not null";
+        assert set != null : "Violation of: charSet is not null";
+
+        //loop through map
+        for (int i = 0; i < str.length(); i++) {
+            char tempStr = str.charAt(i);
+            if (!set.contains(tempStr)) { //if it doesn't have
+                set.add(tempStr); //add it
+            }
+
+        }
+    }
+
+//------------------------done
+    /**
+     * Outputs the "opening" tags in the generated HTML file. These are the
+     * expected elements generated by this method:
+     *
+     * <html> <head> <title>Glossary
+     * <h2>Glossary</h2>
+     * <hr>
+     * <h3>Index</h3>
+     *
+     *
+     * @param out
+     *            the output stream
+     * @param fileIn
+     * @updates out.content
+     * @ensures out.content = #out.content * [the HTML "opening" tags]
+     */
+    private static void startingHTML(SimpleWriter out, String fileIn) {
+        out.println("<!DOCTYPE html>");
+        out.println("<html lang=\'en\'>");
+        out.println("<title>Words Counted in ");
+        out.print(fileIn);
+        out.print("</title>");
+        out.println("</head>");
+        out.println("<body>");
+        out.println("<h2>Words Counted in");
+        out.print(fileIn);
+        out.println("</h2>");
+        out.println("<hr>");
+        out.println("<table border='1'>");
+        out.println("<tr>");
+        out.println("<th>Words</th>");
+        out.println("<th>Counts</th>");
+        out.println("</tr>");
+    }
+
+    /**
+     * Gives table with words and word count.
+     *
+     * @param map
+     * @param out
+     */
+    public static void insideTable(Map<String, Integer> map, SimpleWriter out) {
+
+        String[] arr = new String[map.size()];
+        int i = 0;
+
+        //loop thru map and put the keys(words) in the array
+        for (Map.Pair<String, Integer> tempPair : map) {
+            String tempStr = tempPair.key();
+            arr[i++] = tempStr;
+        }
+        Arrays.sort(arr, new Comparator<String>() { //in case sensitive manner
+
+            @Override
+            public int compare(String o1, String o2) {
+                return o1.compareToIgnoreCase(o2);
+            }
+        });
+
+        //outputs each table row with the word and its count
+        for (String tempStr : arr) {
+            int num = map.value(tempStr);
+            out.println("<tr>");
+            out.println("<td>" + tempStr + "</td>");
+            out.println("<td>" + num + "</td>");
+            out.println("</tr>");
+        }
+
+        //output the ending tags for the HTML table and body
+        out.println("</table>");
+        out.println("</body>");
+        out.println("</html>");
+    }
+
+    /**
+     *
+     * @param input
+     *            the input stream
+     * @param m
+     *            words --> amount of times they've appeared
+     * @param separatorSet
+     *            a set filled with characters that are considered separators
+     * @updates m
+     * @requires input is a valid text file, |input| > 0
+     * @ensures for m, k--> words, v--> counts
+     */
+    private static void getWordsCounts(SimpleReader input,
+            Map<String, Integer> m, Set<Character> separatorSet) {
+        processLines(input, m, separatorSet);
+    }
+
+    /**
+     * Iterates over each line in the input.
+     *
+     * @param input
+     * @param m
+     * @param separatorSet
+     */
+    private static void processLines(SimpleReader input, Map<String, Integer> m,
+            Set<Character> separatorSet) {
+        while (!input.atEOS()) {
+            String currentLine = input.nextLine();
+            processLine(currentLine, m, separatorSet);
+        }
+    }
+
+    /**
+     * processes each line separating.
+     *
+     * @param line
+     * @param m
+     * @param separatorSet
+     */
+    private static void processLine(String line, Map<String, Integer> m,
+            Set<Character> separatorSet) {
+        int position = 0;
+        while (position < line.length()) {
+            String input = nextWordOrSeparator(line, position, separatorSet);
+            updateMapWithInput(input, m, separatorSet); //will update map w NWOS
+            position += input.length(); //move position forward with length of the input
+        }
+    }
+
+    /**
+     *
+     * @param input
+     * @param m
+     * @param separatorSet
+     */
+    private static void updateMapWithInput(String input, Map<String, Integer> m,
+            Set<Character> separatorSet) {
+        char c = input.charAt(0);
+        //if first char is not a separator,then the given is a word
+        if (!separatorSet.contains(c)) {
+            if (m.hasKey(input)) { //check if the word already exists in the map
+                int num = m.value(input) + 1; //if yes then increment count
+                m.remove(input); //remove the old pair
+                m.add(input, num); //and add the new pair with updated num value
+            } else { //if this word is new then start at 1 for count
+                m.add(input, 1);
+            }
+        }
+    }
+
+    //---------------------------------------------
+
+    /**
+     * Main method.
+     *
+     * @param args
+     *            the command line arguments
+     */
+    public static void main(String[] args) {
+        SimpleReader in = new SimpleReader1L();
+        SimpleWriter out = new SimpleWriter1L();
+
+        out.println(
+                "Enter a valid file location for the file you would like to use:");
+        String fileInLocation = in.nextLine();
+        out.println(
+                "Enter a valid folder for where you would like the output to be:");
+        String fileOutLocation = in.nextLine();
+
+        String index = "wordbank.html";
+
+        final String separatorStr = " ,?;:!-.";
+        Set<Character> separatorSet = new Set1L<>();
+        Map<String, Integer> map = new Map1L<>();
+        generateElements(separatorStr, separatorSet);
+
+        SimpleReader textInput = new SimpleReader1L(fileInLocation);
+        SimpleWriter textOutput = new SimpleWriter1L(
+                fileOutLocation + "/" + index);
+
+        getWordsCounts(textInput, map, separatorSet);
+        startingHTML(textOutput, fileInLocation);
+        insideTable(map, textOutput);
+
+        /*
+         * Close input and output streams
+         */
+        in.close();
+        out.close();
+    }
+
+}
